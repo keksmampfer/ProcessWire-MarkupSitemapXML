@@ -3,8 +3,6 @@
 class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
 {
 
-    static $cacheTime;
-
     /**
      * Provide information about this module to ProcessWire
      *
