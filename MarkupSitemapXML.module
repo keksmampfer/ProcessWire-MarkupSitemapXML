@@ -3,6 +3,8 @@
 class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
 {
 
+    public $cacheTime;
+
     /**
      * Provide information about this module to ProcessWire
      *
@@ -13,7 +15,7 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
             'title' => 'Markup Sitemap XML',
             'summary' => 'Generates an XML sitemap at yoursite.com/sitemap.xml for use with Google Webmaster Tools etc.',
             'href' => 'http://processwire.com/talk/index.php/topic,867.0.html',
-            'version' => 120,
+            'version' => 126,
             'permanent' => false,
             'autoload' => true,
             'singular' => true,
@@ -26,8 +28,35 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
      */
     public function init()
     {
+
+        $this->cacheTime = 3600;
+        $urlParams = '';
+
+        // load js only on this page
+        if (wire('input')->get('name') == $this->className) {
+
+            // add flag to js config to process with module js file
+            if (wire('session')->MarkupSitemapXML_generateSitemap == 1) {
+                wire('config')->js("MarkupSitemapXML_generateSitemap", true);
+            }
+
+            // save generateSitemap request to session no prevent redirect loss on submit
+            if (wire('input')->post('submit_save_module')) {
+                wire('session')->MarkupSitemapXML_generateSitemap = 1;
+            } else {
+                wire('session')->remove('MarkupSitemapXML_generateSitemap');
+            }
+
+            $this->config->scripts->add($this->config->urls->siteModules . 'MarkupSitemapXML/MarkupSitemapXML.js');
+        }
+
+        if (wire('input')->get('nocache') == 1) {
+            $this->cacheTime = 0;
+            $urlParams = '?nocache=1';
+        }
+
         // Intercept a request for an URL ending in sitemap.xml and output
-        if (isset($_SERVER['REQUEST_URI']) && strlen($_SERVER['REQUEST_URI']) - strlen('/sitemap.xml') === strrpos($_SERVER['REQUEST_URI'], '/sitemap.xml')) {
+        if (isset($_SERVER['REQUEST_URI']) && strlen($_SERVER['REQUEST_URI']) - strlen('/sitemap.xml' . $urlParams) === strrpos($_SERVER['REQUEST_URI'], '/sitemap.xml' . $urlParams)) {
             $this->addHookBefore("ProcessPageView::pageNotFound", $this, "renderSitemap");
         }
     }
@@ -41,7 +70,7 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
         // add exclude list field (textarea)
         $field = wire('modules')->get('InputfieldTextarea');
         $field->name = 'sitemap_exclude_list';
-        $field->label = __("Enter selectors to exclude pages");
+        $field->label = __("Exclude list");
         $field->value = $data['sitemap_exclude_list'];
         $field->description = __('Matching pages will be excluded from the sitemap. Add one selector per line.');
         $field->notes = __('Examples: "title=My Page Title" or "template=my-template" or "parent.path=/my-page/" (without quotes)');
@@ -91,7 +120,7 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
         // Check for the cached sitemap, else generate and cache a fresh sitemap
         $startpagestr = $this->sanitizer->pageName($startpage);
         $cache = wire('modules')->get("MarkupCache");
-        if (!$output = $cache->get("MarkupSitemapXML$startpagestr$langname", 3600)) {
+        if (!$output = $cache->get("MarkupSitemapXML$startpagestr$langname", $this->cacheTime)) {
             $output = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
             $output .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
             $output .= $this->sitemapListPage(wire('pages')->get($startpage));
@@ -104,13 +133,14 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
     }
 
     /**
-     * Process user-entered exclude selectors
+     * Check if Page matches user-entered exclude selector list
      *
      * @param $page
-     * @return bool
+     * @return bool true if match found
+     * 
      */
 
-    public function processExcludeList($page)
+    public function isPageExcluded($page)
     {
         // get module settings
         $configData = wire('modules')->getModuleConfigData($this);
@@ -122,22 +152,28 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
             $excludeList = explode("\n", $excludeList);
             $excludeList = array_filter($excludeList, 'trim'); // remove any extra \r characters left behind
 
-            // loop through lines and return false if current page matches
+            // loop through lines of exclude list
             foreach ($excludeList as $item) {
+
+                // skip items starting with "//" (commented out)
+                if (substr($item, 0, 2) === '//') {
+                    continue;
+                }
+
                 if ($page->is($item)) {
-                    return false;
+                    return true;
                 }
             }
         }
 
-        return true;
+        return false;
     }
 
     public function sitemapListPage($page)
     {
         $entry = "";
 
-        if ($page->viewable() && ($page->sitemap_ignore == 0 || $page->path == '/') && $this->processExcludeList($page)) { // $page->path part added so that it ignores hiding the homepage, else you wouldn't have ANY pages returned
+        if ($page->viewable() && ($page->sitemap_ignore == 0 || $page->path == '/') && !$this->isPageExcluded($page)) { // $page->path part added so that it ignores hiding the homepage, else you wouldn't have ANY pages returned
             $modified = date('Y-m-d', $page->modified);
             $entry = "\n  <url>\n";
             $entry .= "    <loc>{$page->httpUrl}</loc>\n";
