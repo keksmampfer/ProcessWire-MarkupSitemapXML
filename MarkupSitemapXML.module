@@ -71,7 +71,7 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
         $field = wire('modules')->get('InputfieldTextarea');
         $field->name = 'sitemap_exclude_list';
         $field->label = __("Exclude list");
-        $field->value = $data['sitemap_exclude_list'];
+        // $field->value = array_key_exists('sitemap_exclude_list', $data) ? $data['sitemap_exclude_list'] : '';
         $field->description = __('Matching pages will be excluded from the sitemap. Add one selector per line.');
         $field->notes = __('Examples: "title=My Page Title" or "template=my-template" or "parent.path=/my-page/" (without quotes)');
         if (isset($data['sitemap_exclude_list'])) $field->value = $data['sitemap_exclude_list'];
