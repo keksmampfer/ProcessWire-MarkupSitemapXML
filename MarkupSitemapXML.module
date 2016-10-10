@@ -103,20 +103,7 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
 
         // make sure that page used as root for sitemap actually exists
         if ($this->pages->get($startpage) instanceof NullPage) return;
-
-        // support for LanguageLocalizedURL language module
-        if (wire("modules")->isInstalled("LanguageLocalizedURL")) {
-            $llu = wire("modules")->get("LanguageLocalizedURL");
-            $langname = $this->page->name;
-            $lang = ($llu->defaultLang == $langname) ? 'default' : $langname;
-            $langpage = $this->page;
-            // get the field name for published language from the modules settings
-            $publishedfield_name = $llu->publishedPageField ? $llu->publishedPageField : 'language_published';
-            // add a selector to find children pages when generating sitemap list
-            $this->pageselector = "$publishedfield_name=$langpage->id";
-            //set user language so the module will spit out language localized urls
-            $this->user->language = $this->languages->get($lang);
-        }
+        
         // Check for the cached sitemap, else generate and cache a fresh sitemap
         $startpagestr = $this->sanitizer->pageName($startpage);
         $cache = wire('modules')->get("MarkupCache");
