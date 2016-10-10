@@ -137,7 +137,7 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
      *
      * @param $page
      * @return bool true if match found
-     * 
+     *
      */
 
     public function isPageExcluded($page)
@@ -225,7 +225,7 @@ class MarkupSitemapXML extends WireData implements Module, ConfigurableModule
         $field = wire('fields')->get('sitemap_ignore');
         if ($field && $field->numFieldgroups() > 0)
             throw new WireException("Can't uninstall because field sitemap_ignore is still being used. Please remove it from any templates.");
-        if($field)
+        if ($field)
             wire('fields')->delete($field);
     }
 }
