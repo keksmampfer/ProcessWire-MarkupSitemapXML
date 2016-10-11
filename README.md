@@ -1,7 +1,9 @@
 MarkupSitemapXML
 ================
 
-A module for ProcessWire that generates a sitemap.xml file for use with major search engines. Currently this is only tested with ProcessWire 3+.
+A module for ProcessWire that generates a sitemap.xml file for use with major search engines. Currently this is only tested with ProcessWire 3+. Due the updates the support for older ProcessWire verisons may be lost.
+
+If you are running older versions, try older states of the branch.
 
 Generating sitemap
 ---------------------------------------
